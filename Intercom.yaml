@@ -1,0 +1,186 @@
+esphome:
+  name: intercom
+  friendly_name: Домофон
+
+# При загрузке применяем состояния оптопар
+  on_boot:
+    - priority: 600
+      then:
+        - output.turn_off: relay_answer
+        - output.turn_on: relay_standby
+
+esp32:
+  board: esp32-c6-devkitc-1
+  framework:
+    type: esp-idf
+
+# Home Assistant API
+api:
+  encryption:
+    key: "xxx"
+
+ota:
+  - platform: esphome
+    password: "xxx"
+
+network:
+  enable_ipv6: true
+
+openthread:
+  device_type: FTD
+  tlv: !secret thread_tlv
+
+substitutions:
+  pin_relay_standby: GPIO1
+  pin_call_detect: GPIO3
+  pin_relay_answer: GPIO4
+
+  call_end_detect_delay: 3000ms     # Определение входящего звонка
+  before_answer_delay: 10ms         # Задержка перед откетом
+  answer_on_time: 1500ms            # Задержка между ответом и открытием двери
+  open_on_time: 600ms               # Как долго будет нажата кнопка "Открыть дверь"
+  after_open_delay: 500ms           # Задержка в состоянии ответа после открытия двери
+
+  # Список
+select:
+  - platform: template
+    name: "Mode"
+    icon: "mdi:deskphone"
+    id: mode
+    optimistic: True
+    options:
+    - Once
+    - Always
+    - Reject
+    - Off
+    initial_option: Выключить
+    on_value:
+      then:
+        - lambda: |-
+            if (id(mode).active_index() == 0) {
+              id(auto_open_once).publish_state(true);
+              id(auto_reject).publish_state(false);
+              id(auto_open).publish_state(false);
+
+            } else if (id(mode).active_index() == 1) {
+              id(auto_open).publish_state(true);
+              id(auto_open_once).publish_state(false);
+              id(auto_reject).publish_state(false);
+
+            } else if (id(mode).active_index() == 2) {
+              id(auto_reject).publish_state(true);
+              id(auto_open).publish_state(false);
+              id(auto_open_once).publish_state(false);
+
+            } else if (id(mode).active_index() == 3) {
+              id(auto_reject).publish_state(false);
+              id(auto_open).publish_state(false);
+              id(auto_open_once).publish_state(false);
+            }
+
+  # Вспомогательные бинарные датчики
+binary_sensor:
+  # Открывать
+  - platform: template
+    id: auto_open
+    internal: True
+
+  # Один раз
+  - platform: template
+    id: auto_open_once
+    internal: True
+
+  # Сбрасывать
+  - platform: template
+    id: auto_reject
+    internal: True
+
+  # Датчик входящего заонка
+  - platform: gpio
+    name: "Incoming call"
+    id: incoming_call
+    device_class: lock
+    pin:
+      number: $pin_call_detect
+      mode: INPUT_PULLUP
+      inverted: True
+    filters:
+      delayed_off: $call_end_detect_delay
+    on_press:
+      then:
+    # Открывать
+      - if:
+          condition:
+            binary_sensor.is_on: auto_open
+          then:
+            - script.execute: accept_script
+    # Один раз
+      - if:
+          condition:
+            binary_sensor.is_on: auto_open_once
+          then:
+            - script.execute: accept_script
+            - delay: 2s
+            - lambda: |-
+                auto call = id(mode).make_call();
+                call.set_option("Off");
+                call.perform();
+    # Отклонять
+      - if:
+          condition:
+            binary_sensor.is_on: auto_reject
+          then:
+            - script.execute: reject_script
+
+  # Выходы
+output:
+  - platform: gpio
+    id: relay_answer
+    pin:
+      number: $pin_relay_answer
+      mode: output
+
+  - platform: gpio
+    id: relay_standby
+    pin:
+      number: $pin_relay_standby
+      mode: output
+
+  # Служебные датчики
+button:
+  - platform: template
+    name: "Open"
+    on_press:
+      then:
+        - script.execute: accept_script
+  - platform: template
+    name: "Reject"
+    on_press:
+      then:
+        - script.execute: reject_script
+
+script:
+  # Сброс
+  - id: reject_script
+    mode: restart
+    then:
+      - delay: $before_answer_delay
+      - output.turn_on: relay_answer
+      - output.turn_off: relay_standby
+      - delay: $answer_on_time
+      - output.turn_on: relay_standby
+      - output.turn_off: relay_answer
+  # Открыть
+  - id: accept_script
+    mode: restart
+    then:
+      - delay: $before_answer_delay
+      - output.turn_on: relay_answer
+      - output.turn_off: relay_standby
+      - delay: $answer_on_time
+      - output.turn_off: relay_answer
+      - delay: $open_on_time
+      - output.turn_on: relay_answer
+      - delay: $after_open_delay
+      - output.turn_on: relay_standby
+      - output.turn_off: relay_answer
