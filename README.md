@@ -7,13 +7,13 @@ This project transforms a standard crossbar or digital intercom into a smart dev
 
 • Four operating modes:
 
-    • Once — automatically opens the door on the next call and resets the mode to "Off."
+  • Once — automatically opens the door on the next call and resets the mode to "Off."
     
-    • Always — "passage yard" or open house mode.
+  • Always — "passage yard" or open house mode.
     
-    • Reject — automatically rejects incoming calls (do not disturb mode).
+  • Reject — automatically rejects incoming calls (do not disturb mode).
     
-    • Off — manual control via Home Assistant.
+  • Off — manual control via Home Assistant.
     
 • Fine-tuning timings: All delays (pickup, open button, ring duration) are variable for easy adaptation to a specific intercom model.
 
