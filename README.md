@@ -6,6 +6,8 @@
 
 An **ESPHome** project that turns a regular analog intercom into a **Home Assistant**‑controlled smart device.
 
+[🇷🇺 Русская версия](README_ru.md)
+
 ## ✨ Features
 
 - **Incoming call detection** via an optocoupler (GPIO3 with pull‑up).
