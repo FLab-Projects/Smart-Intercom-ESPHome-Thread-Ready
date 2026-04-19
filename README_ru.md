@@ -2,9 +2,11 @@
 
 [![ESPHome](https://img.shields.io/badge/ESPHome-2024.6%2B-blue?logo=esphome)](https://esphome.io)
 [![Thread](https://img.shields.io/badge/Thread-FTD-0099FF?logo=thread)](https://openthread.io)
-[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![ESP32-C6](https://img.shields.io/badge/ESP32--C6-RISC--V-green.svg)](https://www.espressif.com)
 
 Проект для ESPHome, превращающий обычный аналоговый домофон в устройство, управляемое из Home Assistant.
+
+[🇬🇧 English version](README.md)
 
 ## ✨ Возможности
 
