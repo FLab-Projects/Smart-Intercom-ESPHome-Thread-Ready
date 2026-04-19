@@ -2,7 +2,7 @@ esphome:
   name: intercom
   friendly_name: Домофон
 
-# При загрузке применяем состояния оптопар
+# При загрузке применяем состояния реле
   on_boot:
     - priority: 600
       then:
@@ -17,18 +17,18 @@ esp32:
 # Home Assistant API
 api:
   encryption:
-    key: "xxx"
+    key: "***"  # Ваш ключ шифрования
 
 ota:
   - platform: esphome
-    password: "xxx"
+    password: "***"  # Ваш OTA пароль
 
 network:
   enable_ipv6: true
 
 openthread:
   device_type: FTD
-  tlv: !secret thread_tlv
+  tlv: !secret thread_tlv  # Ваш ключ TLV сети Thread
 
 substitutions:
   pin_relay_standby: GPIO1
@@ -44,15 +44,15 @@ substitutions:
   # Список
 select:
   - platform: template
-    name: "Mode"
+    name: "Режим"
     icon: "mdi:deskphone"
     id: mode
     optimistic: True
     options:
-    - Once
-    - Always
-    - Reject
-    - Off
+    - Один раз
+    - Открывать
+    - Сбрасывать
+    - Выключить
     initial_option: Выключить
     on_value:
       then:
@@ -97,7 +97,7 @@ binary_sensor:
 
   # Датчик входящего заонка
   - platform: gpio
-    name: "Incoming call"
+    name: "Входящий звонок"
     id: incoming_call
     device_class: lock
     pin:
@@ -123,7 +123,7 @@ binary_sensor:
             - delay: 2s
             - lambda: |-
                 auto call = id(mode).make_call();
-                call.set_option("Off");
+                call.set_option("Выключить");
                 call.perform();
     # Отклонять
       - if:
@@ -149,12 +149,12 @@ output:
   # Служебные датчики
 button:
   - platform: template
-    name: "Open"
+    name: "Открыть"
     on_press:
       then:
         - script.execute: accept_script
   - platform: template
-    name: "Reject"
+    name: "Сбросить"
     on_press:
       then:
         - script.execute: reject_script
