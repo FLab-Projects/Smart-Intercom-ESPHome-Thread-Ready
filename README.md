@@ -31,7 +31,7 @@ An **ESPHome** project that turns a regular analog intercom into a **Home Assist
 |--------------------------|------------------------------------------------------------------------------|
 | ESP32‑C6 DevKitC‑1       | Wi‑Fi 6, Bluetooth 5, Thread controller.                                     |
 | KAQY212S optocoupler     | Solid‑state relays (normally open) for galvanic isolation.                   |
-| 220–470 Ω resistors      | Current limiting for the optocoupler LEDs (depends on GPIO voltage).         |
+| 220Ω resistors           | Current limiting for the optocoupler LEDs (depends on GPIO voltage).         |
 | 5 V power supply         | Powers the ESP32‑C6.                                                         |
 
 > 💡 **Why KAQY212S?**  
