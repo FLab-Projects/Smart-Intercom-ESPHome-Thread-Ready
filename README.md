@@ -1,42 +1,114 @@
-# Smart-Intercom-ESPHome-Thread-Ready
-This project transforms a standard crossbar or digital intercom into a smart device integrated with Home Assistant. Built on an ESP32-C6, it uses the modern OpenThread protocol instead of traditional Wi-Fi.
+# 🏠 Smart Intercom with ESP32‑C6 and Thread
 
-**Key Features**
+[![ESPHome](https://img.shields.io/badge/ESPHome-2024.6%2B-blue?logo=esphome)](https://esphome.io)
+[![Thread](https://img.shields.io/badge/Thread-FTD-0099FF?logo=thread)](https://openthread.io)
+[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-• OpenThread (FTD): Operates on the modern Thread mesh network, ensuring low power consumption and high reliability.
+An **ESPHome** project that turns a regular analog intercom into a **Home Assistant**‑controlled smart device.
 
-• Four operating modes:
+## ✨ Features
 
-  • Once — automatically opens the door on the next call and resets the mode to "Off."
-    
-  • Always — "passage yard" or open house mode.
-    
-  • Reject — automatically rejects incoming calls (do not disturb mode).
-    
-  • Off — manual control via Home Assistant.
-    
-• Fine-tuning timings: All delays (pickup, open button, ring duration) are variable for easy adaptation to a specific intercom model.
+- **Incoming call detection** via an optocoupler (GPIO3 with pull‑up).
+- **Two switching optocouplers**:
+  - «Standby» mode (GPIO1) – simulates the handset resting on the hook.
+  - «Answer / Door open» (GPIO4) – simulates picking up the handset and pressing the door‑open button.
 
-**Hardware**
+- **Four operation modes** selectable from Home Assistant:
+  - `Off` – fully manual control.
+  - `Once` – answer and open the door on the next call, then switch to `Off`.
+  - `Always open` – automatically answer and open the door on every call.
+  - `Reject` – always drop the incoming call.
+- **Manual buttons** in the HA interface to open the door or reject a call.
+- **Adjustable timing parameters** for different intercom models.
+- **Thread support** (OpenThread) and IPv6 – ready for Matter.
+- **OTA updates** and encrypted API.
+---
+## 📦 Hardware Requirements
 
-• Controller: ESP32-C6-DevKitC-1 (chosen for Thread support).
+| Component                | Purpose                                                                      |
+|--------------------------|------------------------------------------------------------------------------|
+| ESP32‑C6 DevKitC‑1       | Wi‑Fi 6, Bluetooth 5, Thread controller.                                     |
+| KAQY212S optocoupler     | Solid‑state relays (normally open) for galvanic isolation.                   |
+| 220–470 Ω resistors      | Current limiting for the optocoupler LEDs (depends on GPIO voltage).         |
+| 5 V power supply         | Powers the ESP32‑C6.                                                         |
 
-• Actuators: 3 optocouplers for line switching and call detect.
+> 💡 **Why KAQY212S?**  
+> This chip contains a bidirectional MOSFET switch, rated up to **60 V / 400 mA**, making it perfect for analog intercom signals (both AC and DC). Full galvanic isolation eliminates noise and protects the ESP.
 
-• Passive components (handset emulation):
+---
 
-  • "Answer" resistor (~300–470 Ohm): connected in series with the circuit when relay_answer is triggered, simulating an off-hook handset (speaker impedance).
-  
-  • "Open" resistor (~1–1.5 kOhm): connected in the same circuit when accept_script is triggered, simulating a press of the open button (increasing line impedance).
-  
-  • Call detection: Optocoupler based on PC817 or similar, connected to GPIO3.
+## 🔌 Wiring Diagram
 
-**Operation Logic (Timings)**
+The ESPHome configuration uses the following GPIO pins (customizable in the `substitutions` section):
 
-The configuration allows you to adapt the project to any handset using substitutions:
+| ESP32‑C6 GPIO | Function                          | Connection                                                                                                        |
+|---------------|-----------------------------------|-------------------------------------------------------------------------------------------------------------------|
+| **GPIO1**     | «Standby» optocoupler control     | LED anode → resistor (220–470 Ω) → GPIO1, LED cathode → GND. Output pins (4 & 6) in parallel with the handset hook. |
+| **GPIO3**     | Call detection input              | Optocoupler output pins (4 & 6) in parallel with the call buzzer. The optocoupler LED is driven by the call signal through a resistor. GPIO3 has internal `INPUT_PULLUP`. |
+| **GPIO4**     | «Answer» optocoupler control      | LED anode → resistor → GPIO4, LED cathode → GND. Output pins (4 & 6) in parallel with the door‑open button / answer contact. |
 
-• call_end_detect_delay: end-of-call detection delay (3 sec).
+### Output Logic
 
-• answer_on_time: simulated "conversation" time before opening the door (1.5 sec).
+- **«Standby» optocoupler (GPIO1)** – Normally **ON** (`output.turn_on`), its contacts are closed (handset on hook). It briefly turns OFF during answer or reject.
+- **«Answer» optocoupler (GPIO4)** – Normally **OFF**. Turns ON to simulate lifting the handset or pressing the door‑open button.
 
-• open_on_time: duration of pressing the "Open" button (0.6 sec).
+### Call Detection
+
+The third optocoupler is wired across the call buzzer line. When a call signal (AC or DC voltage) appears, the LED lights up, closing the output contacts and pulling GPIO3 to GND. The firmware uses `inverted: True`, so a closed contact is treated as a **press** (`on_press`).
+
+---
+
+## 🏡 Home Assistant Integration
+
+The following entities will be created in HA:
+
+- **Select «Mode»** – switch between automation modes.
+- **Binary Sensor «Incoming call»** – indicates an active call.
+- **Buttons «Open door»** and **Reject»** – manual triggers.
+
+All controls are available on the ESPHome device card.
+
+---
+
+## ⚙️ Timing Parameters
+
+Adjust the values in the `substitutions` section to match your intercom:
+
+| Parameter                | Default     | Description                                                                                 |
+|--------------------------|-------------|---------------------------------------------------------------------------------------------|
+| `call_end_detect_delay`  | `3000ms`    | Minimum call pulse duration for reliable detection.                                          |
+| `before_answer_delay`    | `10ms`      | Delay before starting the answer sequence (allows line stabilization).                       |
+| `answer_on_time`         | `1500ms`    | Duration the handset is «lifted».                                                            |
+| `open_on_time`           | `600ms`     | Duration of the door‑open button press.                                                      |
+| `after_open_delay`       | `500ms`     | Extra pause after opening before returning to standby.                                       |
+
+---
+
+## 🐞 Troubleshooting
+
+- **Call not detected**:
+  - Ensure `inverted: True` is set for GPIO3 (active low).
+- **Door does not open**:
+  - Increase `open_on_time` (e.g., to `800ms`).
+  - Check with a multimeter that the «Answer» optocoupler actually closes the button contacts.
+- **Modes switch but automation does not trigger**:
+  - Enable ESPHome logs and confirm that `incoming_call` changes to `on` during a call.
+  - Verify the selected mode matches the expected behavior (especially «Once»).
+
+---
+
+## 🧵 Thread & IPv6
+
+The device is configured as a **Full Thread Device** (FTD) and will attempt to join an existing Thread network using the TLV from `secrets.yaml`.
+
+---
+
+### 📸 Screenshots
+
+![Dashboard](main.png)
+![Dashboard](modes.png)
+
+## 📄 License
+
+MIT © 2026 [F-Lab]
+Made with ❤️ by f1x6r
