@@ -102,12 +102,12 @@
 
 ---
 
-### 📸 Screenshots
+### 📸 Скриншоты
 
 ![Dashboard](main.png)
 ![Dashboard](modes.png)
 
-## 📄 License
+## 📄 Лицензия
 
 MIT © 2026 [F-Lab]
 Made with ❤️ by f1x6r
